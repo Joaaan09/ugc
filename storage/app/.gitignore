@@ -1,0 +1,5 @@
+!public/platform
+*
+!private/
+!public/**
+!.gitignore

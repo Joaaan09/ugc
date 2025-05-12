@@ -1,0 +1,17 @@
+---------------------------
+OBTENIR DADES D'UN STREAMER
+--------------------------- 
+
+curl -X GET 'https://api.twitch.tv/helix/users?login=NOM_STREAMER' 
+-H 'Authorization: Bearer nnp1e6f7iqw8uph8k5arc2w9v3yl1h' 
+-H 'Client-Id: 5nu7guqjmn8dt9dkrsqr1vtbfhug7o'
+
+-----------------
+OBTENIR SEGUIDORS
+-----------------
+
+curl -X GET 'https://api.twitch.tv/helix/channels/followers?broadcaster_id=ID_DEL_STREMAR_SE_OBTIENE_ABANS' 
+-H 'Authorization: Bearer nnp1e6f7iqw8uph8k5arc2w9v3yl1h' 
+-H 'Client-Id: 5nu7guqjmn8dt9dkrsqr1vtbfhug7o'
+
+
