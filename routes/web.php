@@ -34,4 +34,8 @@ Route::post('influencer',[InfluencerController::class,'store'])->name('influence
 Route::get('socialprofile/{socialProfile}',[SocialProfileController::class,'show'])->name('socialprofile.show');
 Route::get('instagramGetInstagramData',InstagramGetInstagramData::class)->name('instagram.getInstagramData');
 Route::delete('/influencers/{influencer}', [InfluencerController::class, 'destroy'])->name('influencer.destroy');
+Route::get('/influencer/{id}/twitch', [InfluencerController::class, 'showTwitchMetrics'])->name('influencer.twitch');
+Route::get('/influencers/{id}/twitch', [InfluencerController::class, 'twitch'])->name('influencer.twitch');
+
+
 require __DIR__.'/auth.php';

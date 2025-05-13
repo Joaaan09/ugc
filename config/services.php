@@ -34,5 +34,9 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'twitch' => [
+        'client_id' => env('5nu7guqjmn8dt9dkrsqr1vtbfhug7o'),
+        'access_token' => env('nnp1e6f7iqw8uph8k5arc2w9v3yl1h'),
+    ]
 
 ];

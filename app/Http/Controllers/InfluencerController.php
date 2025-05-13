@@ -13,6 +13,141 @@ use Illuminate\Support\Facades\Http;
 
 class InfluencerController extends Controller
 {
+    public function showTwitchMetrics($id)
+    {
+        // Cargamos el influencer
+        $influencer = Influencer::findOrFail($id);
+
+        // Inicializamos $twitchProfile como null para evitar el error
+        $twitchProfile = null;
+
+        // Supongamos que tienes el nombre de usuario de Twitch
+        $twitchUsername = $influencer->twitch_username;
+
+        // Autenticación a la API de Twitch
+        $clientId = config('services.twitch.client_id');
+        $accessToken = config('services.twitch.access_token');
+
+        $response = Http::withHeaders([
+            'Client-ID' => $clientId,
+            'Authorization' => 'Bearer ' . $accessToken,
+        ])->get('https://api.twitch.tv/helix/users', [
+                    'login' => $twitchUsername,
+                ]);
+
+        $userData = $response->json()['data'][0] ?? null;
+
+        if ($userData) {
+            $twitchProfile = (object) [
+                'username' => $userData['login'],
+                'followers' => $userData['followers'],
+                'profile_image_url' => $userData['profile_image_url'],
+                'description' => $userData['description'] ?? 'No description available',
+            ];
+        }
+
+        // Ahora que $twitchProfile está definido, pasamos todo a la vista
+        return view('influencer.twitch', compact('influencer', 'twitchProfile'));
+    }
+
+    public function twitch($id)
+{
+    // Cargamos el influencer con sus redes sociales y plataformas
+    $influencer = Influencer::with('socialProfiles.platform')->findOrFail($id);
+
+    // Inicializamos $twitchProfile como null para evitar el error
+    $twitchProfile = null;
+
+    // Buscamos el perfil que tenga la plataforma Twitch
+    foreach ($influencer->socialProfiles as $profile) {
+        if (strtolower($profile->platform->name) === 'twich') {
+            $twitchProfile = $profile;
+            break;
+        }
+    }
+
+    // Verifica si se encontró el perfil de Twitch
+    if (!$twitchProfile) {
+        return view('influencer.twitch', [
+            'influencer' => $influencer,
+            'twitchProfile' => null,
+            'message' => "No Twitch profile found for this influencer."
+        ]);
+    }
+
+    // Obtener el ID del streamer (lo usamos para varias métricas)
+    $bearerToken = "Bearer nnp1e6f7iqw8uph8k5arc2w9v3yl1h"; // Token de autenticación
+    $clientId = "5nu7guqjmn8dt9dkrsqr1vtbfhug7o"; // Client ID de Twitch
+    $broadcasterId = $this->obtenerIdStreamer($bearerToken, $clientId, $twitchProfile->username);
+
+    // Obtener las métricas adicionales
+    $totalVistas = $this->obtenerTotalVistas($bearerToken, $clientId, $broadcasterId);
+    $estadoCanal = $this->obtenerEstadoCanal($bearerToken, $clientId, $broadcasterId);
+    $detallesCanal = $this->obtenerDetallesCanal($bearerToken, $clientId, $broadcasterId);
+
+    // Pasar las métricas adicionales a la vista
+    return view('influencer.twitch', compact('influencer', 'twitchProfile', 'totalVistas', 'estadoCanal', 'detallesCanal'));
+}
+
+
+    // Función para obtener las vistas totales del canal de Twitch
+    private function obtenerTotalVistas($bearerToken, $clientId, $broadcasterId)
+    {
+        $response = Http::withHeaders([
+            'Authorization' => $bearerToken,
+            'Client-Id' => $clientId,
+        ])->get("https://api.twitch.tv/helix/videos", [
+                    'user_id' => $broadcasterId,
+                    'first' => 1 // Solo trae el primer video (más reciente)
+                ]);
+
+        if ($response->successful() && isset($response['data'][0]['view_count'])) {
+            return $response['data'][0]['view_count'];
+        }
+
+        return null;
+    }
+
+    // Función para obtener si el canal está en vivo
+    private function obtenerEstadoCanal($bearerToken, $clientId, $broadcasterId)
+    {
+        $response = Http::withHeaders([
+            'Authorization' => $bearerToken,
+            'Client-Id' => $clientId,
+        ])->get('https://api.twitch.tv/helix/streams', [
+                    'user_id' => $broadcasterId
+                ]);
+
+        if ($response->successful() && !empty($response['data'])) {
+            return 'En vivo: ' . $response['data'][0]['title']; // Título de la transmisión en vivo
+        }
+
+        return 'No está en vivo';
+    }
+
+    // Función para obtener más detalles sobre el canal
+    private function obtenerDetallesCanal($bearerToken, $clientId, $broadcasterId)
+    {
+        $response = Http::withHeaders([
+            'Authorization' => $bearerToken,
+            'Client-Id' => $clientId,
+        ])->get('https://api.twitch.tv/helix/channels', [
+                    'broadcaster_id' => $broadcasterId
+                ]);
+
+        if ($response->successful() && isset($response['data'][0])) {
+            return [
+                'descripcion' => $response['data'][0]['description'] ?? 'Sin descripción',
+                'idioma' => $response['data'][0]['broadcaster_language'] ?? 'Desconocido'
+            ];
+        }
+
+        return null;
+    }
+
+
+
+
     /**
      * Display a listing of the resource.
      */
@@ -57,12 +192,13 @@ class InfluencerController extends Controller
                         "5nu7guqjmn8dt9dkrsqr1vtbfhug7o",
                         $request->name
                     );
-            }else{
+            } else {
                 $influencerData['profile_picture_url'] = $urlPfp = $this->obtenerFotoPerfil(
                     "Bearer nnp1e6f7iqw8uph8k5arc2w9v3yl1h",
                     "5nu7guqjmn8dt9dkrsqr1vtbfhug7o",
                     $request->name
-                );; // Set to null if no file is uploaded
+                );
+                ; // Set to null if no file is uploaded
             }
             // Create the influencer
             $influencer = Influencer::create($influencerData);
@@ -147,8 +283,8 @@ class InfluencerController extends Controller
             'Authorization' => $bearerToken,
             'Client-Id' => $clientId,
         ])->get('https://api.twitch.tv/helix/users', [
-            'login' => $nombreStreamer
-        ]);
+                    'login' => $nombreStreamer
+                ]);
 
         if ($response->successful() && isset($response['data'][0]['id'])) {
             return $response['data'][0]['id'];
@@ -163,8 +299,8 @@ class InfluencerController extends Controller
             'Authorization' => $bearerToken,
             'Client-Id' => $clientId,
         ])->get('https://api.twitch.tv/helix/channels/followers', [
-            'broadcaster_id' => $broadcasterId
-        ]);
+                    'broadcaster_id' => $broadcasterId
+                ]);
 
         if ($response->successful() && isset($response['total'])) {
             return $response['total'];
@@ -179,8 +315,8 @@ class InfluencerController extends Controller
             'Authorization' => $bearerToken,
             'Client-Id' => $clientId,
         ])->get('https://api.twitch.tv/helix/users', [
-            'login' => $nombreStreamer
-        ]);
+                    'login' => $nombreStreamer
+                ]);
 
         if ($response->successful() && isset($response['data'][0]['profile_image_url'])) {
             return $response['data'][0]['profile_image_url'];
@@ -210,7 +346,8 @@ class InfluencerController extends Controller
         $stremaerFollowers = $this->obtenerTotalSeguidores(
             "Bearer nnp1e6f7iqw8uph8k5arc2w9v3yl1h",
             "5nu7guqjmn8dt9dkrsqr1vtbfhug7o",
-            $idStreamer);
+            $idStreamer
+        );
 
 
 

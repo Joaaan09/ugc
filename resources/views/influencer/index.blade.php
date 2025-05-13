@@ -31,6 +31,7 @@
                 </div>
             </div>
         </div>
+
         <div
             class="relative h-full flex-1 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
             <h2 class="text-xl font-semibold text-neutral-800 dark:text-white mb-4">Listado de Influencers</h2>
@@ -42,6 +43,7 @@
                             <th class="py-3 px-4">Nombre</th>
                             <th class="py-3 px-4">Plataformas</th>
                             <th class="py-3 px-4">Seguidores Totales</th>
+                            <th class="py-3 px-4">Acciones</th> {{-- NUEVA COLUMNA --}}
                         </tr>
                     </thead>
                     <tbody>
@@ -63,7 +65,7 @@
                                     @foreach ($influencer->socialProfiles as $profile)
                                         <a href="{{ $profile->profile_url ?? '#' }}" target="_blank"
                                             class="text-indigo-600 hover:underline">
-                                            <flux:avatar circle src="{{asset('storage/img/platform/'. Str::lower($profile->platform->name).'.png')}}" />
+                                            <flux:avatar circle src="{{ asset('storage/img/platform/' . Str::lower($profile->platform->name) . '.png') }}" />
                                         </a>
                                     @endforeach
                                     </flux:avatar.group>
@@ -71,11 +73,26 @@
                                 <td class="py-2 px-4 text-neutral-700 dark:text-neutral-300">
                                     {{ $influencer->socialProfiles->sum('followers_count') }}
                                 </td>
-                                <td class="py-2 px-4">
-                                    <form action="{{ route('influencer.destroy', $influencer->id) }}" method="POST">
+                                <td class="py-2 px-4 space-y-1">
+                                    {{-- BOTÓN VER MÉTRICAS TWITCH --}}
+                                    @php
+                                        $twitchProfile = $influencer->socialProfiles->firstWhere('platform.name', 'Twich');
+                                    @endphp
+
+                                    @if ($twitchProfile)
+<a href="{{ route('influencer.twitch', $influencer->id) }}"
+   class="text-purple-600 hover:underline">
+   Ver métricas Twitch
+</a>
+                                    @else
+                                        <span class="text-gray-400 italic">Sin Twitch</span>
+                                    @endif
+
+                                    {{-- BOTÓN ELIMINAR --}}
+                                    <form action="{{ route('influencer.destroy', $influencer->id) }}" method="POST" class="mt-1">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:underline">
+                                        <button type="submit" class="text-red-600 hover:underline text-sm">
                                             {{ __('Delete') }}
                                         </button>
                                     </form>
